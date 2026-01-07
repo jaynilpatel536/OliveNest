@@ -1,0 +1,10 @@
+/vendor/
+/uploads/
+/config/db.php
+.env
+
+phpmailer/
+node_modules/
+.DS_Store
+Thumbs.db
+
