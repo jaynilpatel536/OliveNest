@@ -31,9 +31,9 @@ require_once __DIR__ . '/../config/db.php';
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors\SignatureVerificationError;
 
-/* SAME KEYS */
-$keyId     = "rzp_test_RxT2clH6hdkSUa";
-$keySecret = "8h1iRtm1girEIfd38Wf5levy";
+/* 🔑 Keys read from environment (set in Render dashboard) */
+$keyId     = getenv('RAZORPAY_KEY_ID')     ?: 'rzp_test_RxT2clH6hdkSUa';
+$keySecret = getenv('RAZORPAY_KEY_SECRET') ?: '8h1iRtm1girEIfd38Wf5levy';
 
 $api = new Api($keyId, $keySecret);
 
