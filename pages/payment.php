@@ -21,13 +21,9 @@ $booking_id = (int) $_SESSION['booking_id'];
 $total      = (int) $_SESSION['total_amount'];
 
 /* ========================= DB CONNECTION ========================= */
-$conn = new mysqli("localhost", "root", "", "olivenest_db");
-if ($conn->connect_error) {
-    die("Database Connection Failed");
-}
+require_once __DIR__ . '/../config/db.php';
 
 /* ========================= RAZORPAY SDK ========================= */
-require __DIR__ . '/../vendor/autoload.php';
 use Razorpay\Api\Api;
 
 /* 🔑 TEST KEYS */
@@ -48,25 +44,17 @@ $order = $api->order->create([
 $razorpay_order_id = $order['id'];
 
 /* ========================= INSERT PAYMENT (PENDING) ========================= */
-$stmt = $conn->prepare("
-    INSERT INTO payments (
-        user_id,
-        booking_id,
-        razorpay_order_id,
-        amount,
-        status
-    ) VALUES (?, ?, ?, ?, 'pending')
-");
-
-$stmt->bind_param(
-    "iisi",
-    $user_id,
-    $booking_id,
-    $razorpay_order_id,
-    $total
-);
-
-$stmt->execute();
+$payment_id = getNextId($db, 'payments');
+$db->payments->insertOne([
+    'id'                  => $payment_id,
+    'user_id'             => $user_id,
+    'booking_id'          => $booking_id,
+    'razorpay_order_id'   => $razorpay_order_id,
+    'razorpay_payment_id' => null,
+    'amount'              => $total,
+    'status'              => 'pending',
+    'created_at'          => new MongoDB\BSON\UTCDateTime()
+]);
 
 /* ========================= STORE ORDER ID ========================= */
 $_SESSION['razorpay_order_id'] = $razorpay_order_id;

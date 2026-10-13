@@ -14,29 +14,25 @@ if (isset($_POST['login'])) {
     $password = trim($_POST['password']);
 
     // Fetch user by username
-        $sql = "SELECT * FROM users WHERE username = ? LIMIT 1";
-        $stmt = mysqli_prepare($conn, $sql);
-        mysqli_stmt_bind_param($stmt, "s", $username);
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_stmt_get_result($stmt);
+    $user = $db->users->findOne(['username' => $username]);
 
-    if (mysqli_num_rows($result) == 1) {
+    if ($user) {
 
-        $row = mysqli_fetch_assoc($result);
+        $row = docToArray($user);
 
         // ✅ Verify hashed password
         if (password_verify($password, $row['password'])) {
 
             // Store session values
-            $_SESSION['user_id'] = (int) $row['user_id'];
+            $_SESSION['user_id'] = (int) ($row['id'] ?? $row['user_id'] ?? 0);
             $_SESSION['name']     = $row['full_name'];
             $_SESSION['email']    = $row['email'];
             $_SESSION['username'] = $row['username'];
             $_SESSION['role']     = $row['role'];
 
             // Redirect after login
-           header("Location: /OliveNest/index.php");
-                exit;
+            header("Location: /OliveNest/index.php");
+            exit;
 
 
         } else {

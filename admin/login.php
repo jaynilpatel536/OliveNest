@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "../config/db.php";
+include __DIR__ . '/../config/db.php';
 
 if (isset($_SESSION['admin'])) {
     header("Location: dashboard.php");
@@ -29,13 +29,15 @@ if (isset($_SESSION['admin'])) {
 <?php
 if (isset($_POST['login'])) {
 
-    $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $password = md5($_POST['password']);   // encrypt password
+    $username = trim($_POST['username'] ?? '');
+    $password = md5($_POST['password'] ?? '');   // encrypt password
 
-    $query = "SELECT * FROM admin_users WHERE username='$username' AND password='$password'";
-    $result = mysqli_query($conn, $query);
+    $admin = $db->admin_users->findOne([
+        'username' => $username,
+        'password' => $password
+    ]);
 
-    if (mysqli_num_rows($result) == 1) {
+    if ($admin) {
         $_SESSION['admin'] = $username;
         header("Location: dashboard.php");
         exit();

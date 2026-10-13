@@ -1,4 +1,4 @@
---><?php
+<?php
 /* =========================
    SESSION START
 ========================= */
@@ -23,15 +23,11 @@ $signature  = $_GET['signature'];
 /* =========================
    DB CONNECTION
 ========================= */
-$conn = mysqli_connect("localhost", "root", "", "olivenest_db");
-if (!$conn) {
-    die("Database Connection Failed");
-}
+require_once __DIR__ . '/../config/db.php';
 
 /* =========================
    RAZORPAY SDK
 ========================= */
-require __DIR__ . '/../vendor/autoload.php';
 use Razorpay\Api\Api;
 use Razorpay\Api\Errors\SignatureVerificationError;
 
@@ -55,41 +51,33 @@ try {
     /* =========================
        CHECK PAYMENT EXISTS
     ========================= */
-    $stmt = mysqli_prepare(
-        $conn,
-        "SELECT id FROM payments WHERE razorpay_order_id = ? AND status = 'pending'"
-    );
-    mysqli_stmt_bind_param($stmt, "s", $order_id);
-    mysqli_stmt_execute($stmt);
-    $res = mysqli_stmt_get_result($stmt);
+    $payment = $db->payments->findOne([
+        'razorpay_order_id' => $order_id,
+        'status'            => 'pending'
+    ]);
 
-    if (!mysqli_fetch_assoc($res)) {
+    if (!$payment) {
         die("Payment record not found or already processed");
     }
 
     /* =========================
        UPDATE PAYMENT STATUS
     ========================= */
-    $stmt = mysqli_prepare(
-        $conn,
-        "UPDATE payments
-         SET razorpay_payment_id = ?, status = 'success'
-         WHERE razorpay_order_id = ?"
+    $db->payments->updateOne(
+        ['razorpay_order_id' => $order_id],
+        ['$set' => [
+            'razorpay_payment_id' => $payment_id,
+            'status'              => 'success'
+        ]]
     );
-    mysqli_stmt_bind_param($stmt, "ss", $payment_id, $order_id);
-    mysqli_stmt_execute($stmt);
 
     /* =========================
        CONFIRM BOOKING
     ========================= */
-    $stmt = mysqli_prepare(
-        $conn,
-        "UPDATE bookings
-         SET booking_status = 'confirmed'
-         WHERE id = ?"
+    $db->bookings->updateOne(
+        ['id' => (int) $_SESSION['booking_id']],
+        ['$set' => ['booking_status' => 'confirmed']]
     );
-    mysqli_stmt_bind_param($stmt, "i", $_SESSION['booking_id']);
-    mysqli_stmt_execute($stmt);
 
     /* =========================
        CLEAN ONLY PAYMENT SESSION
@@ -116,14 +104,10 @@ try {
     /* =========================
        PAYMENT FAILED
     ========================= */
-    $stmt = mysqli_prepare(
-        $conn,
-        "UPDATE payments
-         SET status = 'failed'
-         WHERE razorpay_order_id = ?"
+    $db->payments->updateOne(
+        ['razorpay_order_id' => $order_id],
+        ['$set' => ['status' => 'failed']]
     );
-    mysqli_stmt_bind_param($stmt, "s", $order_id);
-    mysqli_stmt_execute($stmt);
 
     die("Payment verification failed");
 }

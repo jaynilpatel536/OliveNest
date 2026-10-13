@@ -1,19 +1,26 @@
 <?php
 // process/process_upload.php
-// absolute path to connection.php (project root)
+session_start();
+
+// session authentication check
+if (!isset($_SESSION['user_id'])) {
+    header("Location: /OliveNest/auth/login.php");
+    exit;
+}
+
 $projectRoot = dirname(__DIR__);
-require_once $projectRoot . '/connection.php';
+require_once dirname(__DIR__) . '/config/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     die("Invalid request method.");
 }
 
 // sanitize inputs
-$owner_name = mysqli_real_escape_string($conn, trim($_POST['owner_name'] ?? ''));
-$home_title = mysqli_real_escape_string($conn, trim($_POST['home_title'] ?? ''));
-$location   = mysqli_real_escape_string($conn, trim($_POST['location'] ?? ''));
+$owner_name = trim($_POST['owner_name'] ?? '');
+$home_title = trim($_POST['home_title'] ?? '');
+$location   = trim($_POST['location'] ?? '');
 $price      = (int)($_POST['price'] ?? 0);
-$description= mysqli_real_escape_string($conn, trim($_POST['description'] ?? ''));
+$description= trim($_POST['description'] ?? '');
 
 if (!$owner_name || !$home_title || !$location || !$price || !$description) {
     die("All fields are required.");
@@ -53,12 +60,26 @@ if (empty($filenames)) {
 $images_csv = implode(",", $filenames);
 
 // insert into DB
-$stmt = $conn->prepare("INSERT INTO homes (owner_name, home_title, location, price, description, images, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')");
-$stmt->bind_param("sssiss", $owner_name, $home_title, $location, $price, $description, $images_csv);
+$newId = getNextId($db, 'homes');
+try {
+    $result = $db->homes->insertOne([
+        'id'          => $newId,
+        'owner_name'  => $owner_name,
+        'home_title'  => $home_title,
+        'location'    => $location,
+        'price'       => $price,
+        'description' => $description,
+        'images'      => $images_csv,
+        'status'      => 'pending',
+        'created_at'  => new MongoDB\BSON\UTCDateTime()
+    ]);
 
-if ($stmt->execute()) {
-    header("Location: " . dirname($projectRoot) . "/OliveNest/pages/upload_success.php");
-    exit;
-} else {
-    echo "DB error: " . $stmt->error;
+    if ($result->getInsertedCount() > 0) {
+        header("Location: /OliveNest/pages/upload_success.php");
+        exit;
+    } else {
+        echo "DB error: Failed to insert home.";
+    }
+} catch (Exception $e) {
+    echo "DB error: " . $e->getMessage();
 }

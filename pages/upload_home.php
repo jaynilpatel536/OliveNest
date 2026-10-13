@@ -20,10 +20,7 @@ if ($_SESSION['role'] === 'guest') {
 }
 
 /* ================= DB CONNECTION ================= */
-$conn = mysqli_connect("localhost", "root", "", "olivenest_db");
-if (!$conn) {
-    die("DB Connection failed: " . mysqli_connect_error());
-}
+require_once __DIR__ . '/../config/db.php';
 
 $msg = "";
 
@@ -49,29 +46,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = "Failed to upload image!";
     } else {
         /* ================= INSERT INTO DB ================= */
-        $sql = "
-            INSERT INTO homes 
-            (owner_name, home_title, location, price, description, images)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ";
+        try {
+            $newId = getNextId($db, 'homes');
+            $insertResult = $db->homes->insertOne([
+                'id'          => $newId,
+                'owner_name'  => $owner_name,
+                'home_title'  => $home_title,
+                'location'    => $location,
+                'price'       => $price,
+                'description' => $description,
+                'images'      => $imageName,
+                'status'      => 'pending',
+                'created_at'  => new MongoDB\BSON\UTCDateTime()
+            ]);
 
-        $stmt = mysqli_prepare($conn, $sql);
-        mysqli_stmt_bind_param(
-            $stmt,
-            "ssssis",
-            $owner_name,
-            $home_title,
-            $location,
-            $price,
-            $description,
-            $imageName
-        );
-
-        if (mysqli_stmt_execute($stmt)) {
-            header("Location: upload_success.php");
-            exit;
-        } else {
-            $msg = "Something went wrong: " . mysqli_error($conn);
+            if ($insertResult->getInsertedCount() > 0) {
+                header("Location: upload_success.php");
+                exit;
+            } else {
+                $msg = "Something went wrong: Failed to insert into database.";
+            }
+        } catch (Exception $e) {
+            $msg = "Something went wrong: " . $e->getMessage();
         }
     }
 }

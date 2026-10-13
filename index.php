@@ -4,28 +4,28 @@ require __DIR__ . '/config/db.php'; // Database connection
 
 // Fetch rooms from database
 $sort = $_GET['sort'] ?? 'recommended';
-$orderBy = "ORDER BY rating DESC"; // Recommended (default)
+$sortOrder = ['rating' => -1]; // Recommended (default)
 
 if ($sort === 'price_low') {
-    $orderBy = "ORDER BY price ASC";
+    $sortOrder = ['price' => 1];
 } elseif ($sort === 'price_high') {
-    $orderBy = "ORDER BY price DESC";
+    $sortOrder = ['price' => -1];
 } elseif ($sort === 'rating') {
-    $orderBy = "ORDER BY rating DESC";
+    $sortOrder = ['rating' => -1];
 } elseif ($sort === 'city') {
-    $orderBy = "ORDER BY city ASC";
+    $sortOrder = ['city' => 1];
 } elseif ($sort === 'newest') {
-    $orderBy = "ORDER BY id DESC";
+    $sortOrder = ['id' => -1];
 }
 
-$sql = "SELECT id, title, city, price, rating, description FROM rooms $orderBy LIMIT 8";
-$result = mysqli_query($conn, $sql);
+$cursor = $db->rooms->find([], [
+    'sort' => $sortOrder,
+    'limit' => 8
+]);
 
 $rooms = [];
-if ($result && mysqli_num_rows($result) > 0) {
-    while ($row = mysqli_fetch_assoc($result)) {
-        $rooms[] = $row;
-    }
+foreach ($cursor as $doc) {
+    $rooms[] = docToArray($doc);
 }
 
 // Flash message

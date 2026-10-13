@@ -16,16 +16,18 @@ $msg = "";
 if (isset($_POST['save'])) {
     $extra = $_POST['extra_info'] ?? '';
 
-    $sql = "UPDATE users SET extra_info='$extra' WHERE username='$username'";
-    mysqli_query($conn, $sql);
+    $db->users->updateOne(
+        ['username' => $username],
+        ['$set' => ['extra_info' => $extra]]
+    );
 
     $msg = "Profile updated successfully!";
     $edit = false;
 }
 
 /* FETCH USER */
-$result = mysqli_query($conn, "SELECT * FROM users WHERE username='$username'");
-$user = mysqli_fetch_assoc($result);
+$userDoc = $db->users->findOne(['username' => $username]);
+$user = $userDoc ? docToArray($userDoc) : [];
 
 // Safely define extra_info if it doesn't exist
 $extra_info = $user['extra_info'] ?? "";

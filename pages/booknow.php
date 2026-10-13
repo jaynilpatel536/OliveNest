@@ -25,17 +25,13 @@ if ($room_id <= 0) {
 }
 
 /* ========================= FETCH ROOM DETAILS ========================= */
-$query = "SELECT title, price FROM rooms WHERE id = ?";
-$stmt  = mysqli_prepare($conn, $query);
-mysqli_stmt_bind_param($stmt, "i", $room_id);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
+$roomDoc = $db->rooms->findOne(['id' => $room_id]);
 
-if (mysqli_num_rows($result) === 0) {
+if (!$roomDoc) {
     die("Room not found");
 }
 
-$room = mysqli_fetch_assoc($result);
+$room = docToArray($roomDoc);
 $room_title = $room['title'];
 $room_price = (int) $room['price'];
 
@@ -58,42 +54,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Check-out date must be after check-in date";
     } else {
 
-        $insert = "
-            INSERT INTO bookings (
-                user_id,
-                room_id,
-                guest_name,
-                guest_email,
-                guest_phone,
-                check_in,
-                check_out,
-                room_price,
-                platform_fee,
-                total_amount,
-                booking_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-        ";
-
-        $stmt = mysqli_prepare($conn, $insert);
-        mysqli_stmt_bind_param(
-            $stmt,
-            "iisssssiii",
-            $user_id,
-            $room_id,
-            $user_fullname,
-            $user_email,
-            $phone,
-            $check_in,
-            $check_out,
-            $room_price,
-            $platform_fee,
-            $total_amount
-        );
-
-        mysqli_stmt_execute($stmt);
+        $booking_id = getNextId($db, 'bookings');
+        $db->bookings->insertOne([
+            'id'             => $booking_id,
+            'user_id'        => $user_id,
+            'room_id'        => $room_id,
+            'guest_name'     => $user_fullname,
+            'guest_email'    => $user_email,
+            'guest_phone'    => $phone,
+            'check_in'       => $check_in,
+            'check_out'      => $check_out,
+            'room_price'     => $room_price,
+            'platform_fee'   => $platform_fee,
+            'total_amount'   => $total_amount,
+            'booking_status' => 'pending',
+            'created_at'     => new MongoDB\BSON\UTCDateTime()
+        ]);
 
         /* ========================= SAVE SESSION DATA ========================= */
-        $_SESSION['booking_id']   = mysqli_insert_id($conn);
+        $_SESSION['booking_id']   = $booking_id;
         $_SESSION['room_price']   = $room_price;
         $_SESSION['platform_fee'] = $platform_fee;
         $_SESSION['total_amount'] = $total_amount;

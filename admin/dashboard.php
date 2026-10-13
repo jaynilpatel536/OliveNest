@@ -1,5 +1,5 @@
 <?php 
-include "../config/db.php"; 
+include __DIR__ . '/../config/db.php'; 
 session_start();
 
 // if admin not logged in redirect
@@ -131,22 +131,27 @@ if(!isset($_SESSION['admin'])){
         </tr>
 
         <?php
-        $homes = mysqli_query($conn, "SELECT * FROM homes ORDER BY id DESC");
-        while($row = mysqli_fetch_assoc($homes)){
+        $homesCursor = $db->homes->find([], ['sort' => ['id' => -1]]);
+        foreach($homesCursor as $doc){
+            $row = docToArray($doc);
             echo "<tr>";
-            echo "<td>".$row['id']."</td>";
-            echo "<td>".$row['owner_name']."</td>";
-            echo "<td>".$row['home_title']."</td>";
-            echo "<td>".$row['location']."</td>";
-            echo "<td>".$row['price']."</td>";
-            echo "<td>".$row['description']."</td>";
-            echo "<td>".$row['status']."</td>";
-            echo "<td>".$row['created_at']."</td>";
+            echo "<td>" . htmlspecialchars((string)($row['id'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($row['owner_name'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($row['home_title'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($row['location'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($row['price'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($row['description'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($row['status'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($row['created_at'] ?? '')) . "</td>";
 
             echo "<td>";
-            $imgs = explode(",", $row['images']);
+            $imagesVal = $row['images'] ?? '';
+            $imgs = is_array($imagesVal) ? $imagesVal : explode(",", (string)$imagesVal);
             foreach($imgs as $i){
-                echo "<img src='../uploads/$i' width='70' style='margin:5px; border-radius:4px;'>";
+                $i = trim($i);
+                if ($i !== '') {
+                    echo "<img src='../uploads/" . htmlspecialchars($i) . "' width='70' style='margin:5px; border-radius:4px;'>";
+                }
             }
             echo "</td>";
 
@@ -175,19 +180,20 @@ if(!isset($_SESSION['admin'])){
         </tr>
 
         <?php
-        $book = mysqli_query($conn, "SELECT * FROM booking ORDER BY id DESC");
-        while($r = mysqli_fetch_assoc($book)){
+        $bookCursor = $db->bookings->find([], ['sort' => ['id' => -1]]);
+        foreach($bookCursor as $doc){
+            $r = docToArray($doc);
             echo "<tr>";
-            echo "<td>".$r['id']."</td>";
-            echo "<td>".$r['name']."</td>";
-            echo "<td>".$r['email']."</td>";
-            echo "<td>".$r['phone']."</td>";
-            echo "<td>".$r['room_type']."</td>";
-            echo "<td>".$r['check_in']."</td>";
-            echo "<td>".$r['check_out']."</td>";
-            echo "<td>".$r['payment_status']."</td>";
-            echo "<td>".$r['amount']."</td>";
-            echo "<td>".$r['created_at']."</td>";
+            echo "<td>" . htmlspecialchars((string)($r['id'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($r['guest_name'] ?? $r['name'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($r['guest_email'] ?? $r['email'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($r['guest_phone'] ?? $r['phone'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($r['room_type'] ?? $r['room_id'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($r['check_in'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($r['check_out'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($r['payment_status'] ?? $r['booking_status'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($r['total_amount'] ?? $r['amount'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($r['created_at'] ?? '')) . "</td>";
             echo "</tr>";
         }
         ?>
@@ -200,39 +206,37 @@ if(!isset($_SESSION['admin'])){
     <h2>Users</h2>
 
     <?php
-    $users = mysqli_query($conn, "SELECT * FROM users ORDER BY user_id DESC");
+    $userDocs = iterator_to_array($db->users->find([], ['sort' => ['id' => -1]]));
 
-    if (!$users) {
-        echo "<p style='color:red; font-weight:bold;'>SQL ERROR: " . mysqli_error($conn) . "</p>";
+    if(empty($userDocs)){
+        echo "<p>No users found.</p>";
     } else {
-        if(mysqli_num_rows($users) > 0){
-            echo "<table>
-                    <tr>
-                        <th>User ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Username</th>
-                        <th>Password</th>
-                        <th>Role</th>
-                        <th>Date</th>
-                    </tr>";
+        echo "<table>
+                <tr>
+                    <th>User ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Username</th>
+                    <th>Password</th>
+                    <th>Role</th>
+                    <th>Date</th>
+                </tr>";
 
-            while($u = mysqli_fetch_assoc($users)){
-                echo "<tr>";
-                echo "<td>".$u['user_id']."</td>";
-                echo "<td>".$u['full_name']."</td>";
-                echo "<td>".$u['email']."</td>";
-                echo "<td>".$u['username']."</td>";
-                echo "<td>".$u['password']."</td>";
-                echo "<td>".$u['role']."</td>";
-                echo "<td>".$u['created_at']."</td>";
-                echo "</tr>";
-            }
-
-            echo "</table>";
-        } else {
-            echo "<p>No users found.</p>";
+        foreach($userDocs as $doc){
+            $u = docToArray($doc);
+            $userId = $u['id'] ?? $u['user_id'] ?? '';
+            echo "<tr>";
+            echo "<td>" . htmlspecialchars((string)$userId) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($u['full_name'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($u['email'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($u['username'] ?? '')) . "</td>";
+            echo "<td>****</td>";
+            echo "<td>" . htmlspecialchars((string)($u['role'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($u['created_at'] ?? '')) . "</td>";
+            echo "</tr>";
         }
+
+        echo "</table>";
     }
     ?>
 </div>
@@ -244,44 +248,34 @@ if(!isset($_SESSION['admin'])){
     <h2>Contact Messages</h2>
 
     <?php
-    // Query database
-    $messages = mysqli_query($conn, "SELECT * FROM contact_messages ORDER BY id DESC");
+    $messageDocs = iterator_to_array($db->contact_messages->find([], ['sort' => ['id' => -1]]));
 
-    // Check if query failed
-    if (!$messages) {
-        echo "<p style='color:red; font-weight:bold;'>
-                SQL ERROR: " . mysqli_error($conn) . "
-              </p>";
-    } 
-    else {
-        // Check rows exist
-        if(mysqli_num_rows($messages) > 0){
-            echo "<table>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Message</th>
-                        <th>Date</th>
-                    </tr>";
+    if(empty($messageDocs)){
+        echo "<p>No contact messages found.</p>";
+    } else {
+        echo "<table>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Message</th>
+                    <th>Date</th>
+                </tr>";
 
-            // Fetch rows
-            while($m = mysqli_fetch_assoc($messages)){
-                echo "<tr>";
-                echo "<td>".$m['id']."</td>";
-                echo "<td>".$m['name']."</td>";
-                echo "<td>".$m['email']."</td>";
-                echo "<td>".$m['phone']."</td>";
-                echo "<td>".$m['message']."</td>";
-                echo "<td>".$m['created_at']."</td>";
-                echo "</tr>";
-            }
-
-            echo "</table>";
-        } else {
-            echo "<p>No contact messages found.</p>";
+        foreach($messageDocs as $doc){
+            $m = docToArray($doc);
+            echo "<tr>";
+            echo "<td>" . htmlspecialchars((string)($m['id'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($m['name'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($m['email'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($m['phone'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($m['message'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($m['created_at'] ?? '')) . "</td>";
+            echo "</tr>";
         }
+
+        echo "</table>";
     }
     ?>
 </div>
@@ -301,14 +295,15 @@ if(!isset($_SESSION['admin'])){
         </tr>
 
         <?php
-        $review = mysqli_query($conn, "SELECT * FROM review ORDER BY id DESC");
-        while($rv = mysqli_fetch_assoc($review)){
+        $reviewCursor = $db->reviews->find([], ['sort' => ['id' => -1]]);
+        foreach($reviewCursor as $doc){
+            $rv = docToArray($doc);
             echo "<tr>";
-            echo "<td>".$rv['id']."</td>";
-            echo "<td>".$rv['user_name']."</td>";
-            echo "<td>".$rv['room_name']."</td>";
-            echo "<td>".$rv['rating']."</td>";
-            echo "<td>".$rv['review_text']."</td>";
+            echo "<td>" . htmlspecialchars((string)($rv['id'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($rv['user_name'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($rv['room_name'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($rv['rating'] ?? '')) . "</td>";
+            echo "<td>" . htmlspecialchars((string)($rv['review_text'] ?? '')) . "</td>";
             echo "</tr>";
         }
         ?>

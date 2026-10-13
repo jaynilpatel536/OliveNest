@@ -7,6 +7,5 @@ if (session_status() === PHP_SESSION_NONE) {
 // Absolute base path (NO MORE ../ confusion)
 define('BASE_PATH', dirname(__DIR__));
 
-// Includes
+// Includes - db.php now handles vendor/autoload.php internally
 require_once BASE_PATH . '/config/db.php';
-require_once BASE_PATH . '/vendor/autoload.php';
