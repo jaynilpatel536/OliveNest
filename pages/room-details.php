@@ -26,18 +26,30 @@ if (isset($_POST['save_dates'])) {
 
 
 
-$id = $_GET['id'] ?? 0;
+require_once __DIR__ . '/../config/db.php';
 
-if ($id == 0 || !isset($_SESSION['rooms_data'][$id])) {
+$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+
+if ($id <= 0) {
     header("Location: rooms.php");
     exit;
 }
 
-/* FETCH FROM SESSION */
-$room = $_SESSION['rooms_data'][$id];
+/* FETCH FROM SESSION OR DATABASE DIRECTLY */
+if (isset($_SESSION['rooms_data'][$id])) {
+    $room = $_SESSION['rooms_data'][$id];
+} else {
+    $roomDoc = $db->rooms->findOne(['id' => $id]);
+    if (!$roomDoc) {
+        header("Location: rooms.php");
+        exit;
+    }
+    $room = docToArray($roomDoc);
+    $_SESSION['rooms_data'][$id] = $room;
+}
 
-$room_price = $room['price'];
-$avg_rating = $room['rating'];
+$room_price = (int) $room['price'];
+$avg_rating = $room['rating'] ?? 4.5;
 $title      = $room['title'];
 
 /* PLATFORM FEE LOGIC */
@@ -48,8 +60,6 @@ if ($room_price <= 1500) {
 } else {
     $platform_fee = 1000;
 }
-
-require __DIR__ . '/../config/db.php';
 /* ===== CHECK EXISTING BOOKINGS FOR THIS ROOM ===== */
 function isDateAvailable($dbOrRoomId, $roomIdOrCheckIn = null, $checkInOrCheckOut = null, $checkOut = null) {
     global $db;

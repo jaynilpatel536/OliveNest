@@ -62,14 +62,14 @@ body{font-family:Arial;background:#f2f2f2;}
 <?php if(!$edit): ?>
 
     <!-- VIEW MODE -->
-    <p><strong>Name:</strong> <?= $user['full_name'] ?></p>
-    <p><strong>Username:</strong> <?= $user['username'] ?></p>
-    <p><strong>Email:</strong> <?= $user['email'] ?></p>
-    <p><strong>Role:</strong> <?= ucfirst($user['role']) ?></p>
+    <p><strong>Name:</strong> <?= htmlspecialchars($user['full_name'] ?? '') ?></p>
+    <p><strong>Username:</strong> <?= htmlspecialchars($user['username'] ?? '') ?></p>
+    <p><strong>Email:</strong> <?= htmlspecialchars($user['email'] ?? '') ?></p>
+    <p><strong>Role:</strong> <?= htmlspecialchars(ucfirst($user['role'] ?? '')) ?></p>
 
     <hr>
     <h4>About Me</h4>
-    <p><?= nl2br($extra_info ?: "No additional information added yet.") ?></p>
+    <p><?= nl2br(htmlspecialchars($extra_info ?: "No additional information added yet.")) ?></p>
 
     <br>
     <a href="profile.php?edit=1" class="btn edit">Edit Profile</a>
@@ -79,7 +79,7 @@ body{font-family:Arial;background:#f2f2f2;}
     <!-- EDIT MODE -->
     <form method="POST">
         <label>Tell us about yourself</label>
-        <textarea name="extra_info" rows="6" style="width:100%;"><?= $extra_info ?></textarea>
+        <textarea name="extra_info" rows="6" style="width:100%;"><?= htmlspecialchars($extra_info) ?></textarea>
 
         <br><br>
         <button type="submit" name="save" class="btn save">Save</button>

@@ -116,7 +116,7 @@ a {
     <!-- Step 2: New Password Form -->
     <?php if ($step == "reset"): ?>
         <form method="POST">
-            <input type="hidden" name="email" value="<?php echo $email; ?>">
+            <input type="hidden" name="email" value="<?php echo htmlspecialchars($email ?? ''); ?>">
             <input type="password" name="password" placeholder="Enter new password" required>
             <button type="submit" name="reset_password">Reset Password</button>
         </form>

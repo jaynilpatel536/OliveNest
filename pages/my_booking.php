@@ -64,13 +64,9 @@ $bookings = [];
 foreach ($cursor as $doc) {
     $bookings[] = docToArray($doc);
 }
-?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>My Bookings - OliveNest</title>
+require_once __DIR__ . '/../includes/header.php';
+?>
 
 <style>
 :root {
@@ -229,13 +225,8 @@ h2 {
     }
 }
 </style>
-</head>
-
-<body>
 
 <div class="page-wrapper">
-
-<?php include "../includes/header.php"; ?>
 
 <main class="content-area">
 <div class="container">
@@ -291,9 +282,6 @@ h2 {
 </div>
 </main>
 
-<?php include "../includes/footer.php"; ?>
-
 </div>
 
-</body>
-</html>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

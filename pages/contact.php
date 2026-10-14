@@ -134,7 +134,7 @@
         <?php if(isset($_SESSION['username'])): ?>
 <form action="../process/contact_process.php" method="POST">
 <?php else: ?>
-<form action="/OliveNest/login.php" method="GET">
+<form action="/OliveNest/auth/login.php" method="GET">
 <?php endif; ?>
 
 

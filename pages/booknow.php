@@ -48,10 +48,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $check_in  = $_POST['check_in'];
     $check_out = $_POST['check_out'];
 
+    $today = date('Y-m-d');
+    $days  = (strtotime($check_out) - strtotime($check_in)) / 86400;
+
     if (empty($phone) || empty($check_in) || empty($check_out)) {
         $error = "All fields are required";
+    } elseif ($check_in < $today) {
+        $error = "Past dates not allowed";
     } elseif (strtotime($check_out) <= strtotime($check_in)) {
         $error = "Check-out date must be after check-in date";
+    } elseif ($days < 2 || $days > 15) {
+        $error = "Date duration only 2 up to 15 days";
     } else {
 
         $booking_id = getNextId($db, 'bookings');
@@ -80,14 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         header("Location: payment.php");
         exit;
-    }
-    $today = date('Y-m-d');
-    $days = (strtotime($check_out) - strtotime($check_in)) / 86400;
-
-    if ($check_in < $today) {
-        $error = "Past dates not allowed";
-    } elseif ($days < 2 || $days > 15) {
-        $error = "Date duration only 2 up to 15 days";
     }
 
 }

@@ -1,4 +1,4 @@
-<?php include $_SERVER['DOCUMENT_ROOT']."/OliveNest/includes/header.php"; ?>
+<?php require_once __DIR__ . '/../includes/header.php'; ?>
 <?php
 
 
@@ -129,6 +129,6 @@ body{background:#f4f6f8;}
 </form>
 
 </div>
-<?php include $_SERVER['DOCUMENT_ROOT']."/OliveNest/includes/footer.php"; ?>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>
 </body>
 </html>
