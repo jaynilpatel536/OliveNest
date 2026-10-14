@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install PHP extensions
 RUN docker-php-ext-install zip
-RUN pecl install mongodb && docker-php-ext-enable mongodb
+RUN pecl install mongodb-1.21.11 && docker-php-ext-enable mongodb
 
 # Enable Apache modules
 RUN a2enmod rewrite alias
@@ -30,7 +30,7 @@ COPY . /var/www/html/
 WORKDIR /var/www/html
 
 # Install PHP dependencies
-RUN composer update --no-dev --optimize-autoloader --no-interaction
+RUN composer update --no-dev --optimize-autoloader --no-interaction --ignore-platform-req=ext-mongodb
 
 # Create required directories
 RUN mkdir -p uploads/homes uploads/rooms \
