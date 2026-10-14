@@ -30,7 +30,7 @@ COPY . /var/www/html/
 WORKDIR /var/www/html
 
 # Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
+RUN composer update --no-dev --optimize-autoloader --no-interaction
 
 # Create required directories
 RUN mkdir -p uploads/homes uploads/rooms \
