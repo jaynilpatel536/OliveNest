@@ -1,6 +1,5 @@
 .git
 .gitignore
-docker
 Dockerfile
 .dockerignore
 *.md
@@ -9,3 +8,4 @@ node_modules
 .env
 .DS_Store
 Thumbs.db
+migrate_to_mongo.php
