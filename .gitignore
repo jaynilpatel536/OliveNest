@@ -1,5 +1,6 @@
 /vendor/
-/uploads/
+/uploads/homes/
+!/uploads/rooms/
 .env
 
 phpmailer/
