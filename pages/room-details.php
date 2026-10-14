@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 /* ===== SAVE BOOKING DATES ===== */
@@ -27,18 +26,30 @@ if (isset($_POST['save_dates'])) {
 
 
 
-$id = $_GET['id'] ?? 0;
+require_once __DIR__ . '/../config/db.php';
 
-if ($id == 0 || !isset($_SESSION['rooms_data'][$id])) {
+$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+
+if ($id <= 0) {
     header("Location: rooms.php");
     exit;
 }
 
-/* FETCH FROM SESSION */
-$room = $_SESSION['rooms_data'][$id];
+/* FETCH FROM SESSION OR DATABASE DIRECTLY */
+if (isset($_SESSION['rooms_data'][$id])) {
+    $room = $_SESSION['rooms_data'][$id];
+} else {
+    $roomDoc = $db->rooms->findOne(['id' => $id]);
+    if (!$roomDoc) {
+        header("Location: rooms.php");
+        exit;
+    }
+    $room = docToArray($roomDoc);
+    $_SESSION['rooms_data'][$id] = $room;
+}
 
-$room_price = $room['price'];
-$avg_rating = $room['rating'];
+$room_price = (int) $room['price'];
+$avg_rating = $room['rating'] ?? 4.5;
 $title      = $room['title'];
 
 /* PLATFORM FEE LOGIC */
@@ -49,39 +60,40 @@ if ($room_price <= 1500) {
 } else {
     $platform_fee = 1000;
 }
-
-require __DIR__ . '/../config/db.php';
 /* ===== CHECK EXISTING BOOKINGS FOR THIS ROOM ===== */
-function isDateAvailable($conn, $room_id, $check_in, $check_out) {
+function isDateAvailable($dbOrRoomId, $roomIdOrCheckIn = null, $checkInOrCheckOut = null, $checkOut = null) {
+    global $db;
 
-    $sql = "
-        SELECT id FROM bookings
-        WHERE room_id = ?
-        AND booking_status != 'cancelled'
-        AND (
-            check_in < ?
-            AND check_out > ?
-        )
-    ";
+    if ($dbOrRoomId instanceof MongoDB\Database) {
+        $database  = $dbOrRoomId;
+        $room_id   = (int)$roomIdOrCheckIn;
+        $check_in  = $checkInOrCheckOut;
+        $check_out = $checkOut;
+    } else {
+        $database  = $db;
+        $room_id   = (int)$dbOrRoomId;
+        $check_in  = $roomIdOrCheckIn;
+        $check_out = $checkInOrCheckOut;
+    }
 
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iss", $room_id, $check_out, $check_in);
-    $stmt->execute();
-    $res = $stmt->get_result();
+    $conflict = $database->bookings->findOne([
+        'room_id' => $room_id,
+        'booking_status' => ['$ne' => 'cancelled'],
+        'check_in' => ['$lt' => $check_out],
+        'check_out' => ['$gt' => $check_in]
+    ]);
 
-    return $res->num_rows === 0;
+    return $conflict === null;
 }
 
 
-$stmt = $conn->prepare("SELECT city, full_address, latitude, longitude FROM rooms WHERE id = ?");
-$stmt->bind_param("i", $id);
-$stmt->execute();
-$loc = $stmt->get_result()->fetch_assoc();
+$locDoc = $db->rooms->findOne(['id' => (int)$id]);
+$loc = $locDoc ? docToArray($locDoc) : [];
 
-$city = $loc['city'];
-$full_address = $loc['full_address'];
-$latitude = $loc['latitude'];
-$longitude = $loc['longitude'];
+$city = $loc['city'] ?? '';
+$full_address = $loc['full_address'] ?? '';
+$latitude = $loc['latitude'] ?? '';
+$longitude = $loc['longitude'] ?? '';
 
 
 /* STORE FOR NEXT PAGES */
@@ -105,7 +117,7 @@ if (isset($_POST['save_dates'])) {
     } elseif ($days < 2 || $days > 15) {
         $date_error = "Date duration only 2 up to 15 days";
 
-    } elseif (!isDateAvailable($conn, $id, $check_in, $check_out)) {
+    } elseif (!isDateAvailable($db, $id, $check_in, $check_out)) {
         $date_error = "Selected dates are already booked for this room";
 
     } else {
@@ -123,7 +135,14 @@ if (isset($_POST['save_dates'])) {
 ========================================= */
 
 $folder = "../uploads/rooms/room".$id."/";
-$images = glob($folder."*.{jpg,jpeg,png,webp}", GLOB_BRACE);
+$images = glob($folder."*.{jpg,jpeg,png,webp}", GLOB_BRACE) ?: [];
+if (empty($images)) {
+    if (file_exists(__DIR__ . "/../assets/images/room" . $id . ".jpg")) {
+        $images = ["/OliveNest/assets/images/room" . $id . ".jpg"];
+    } else {
+        $images = ["/OliveNest/assets/images/room1.jpg"];
+    }
+}
 
 // Dummy data
 
@@ -147,19 +166,24 @@ $reviews = [
     ['name'=>'Alice','rating'=>5,'date'=>'Feb 2026','comment'=>'Amazing stay, very clean!'],
     ['name'=>'Bob','rating'=>4,'date'=>'Jan 2026','comment'=>'Great host, location perfect.'],
 ];
-$stmt = $conn->prepare("
-    SELECT check_in, check_out,
-    DATEDIFF(check_out, check_in) AS days
-    FROM bookings
-    WHERE room_id = ?
-      AND booking_status != 'cancelled'
-      AND check_out >= CURDATE()
-    ORDER BY check_in ASC
-");
 
-$stmt->bind_param("i", $id);
-$stmt->execute();
-$bookings = $stmt->get_result();
+$today = date('Y-m-d');
+$bookingCursor = $db->bookings->find([
+    'room_id' => (int)$id,
+    'booking_status' => ['$ne' => 'cancelled'],
+    'check_out' => ['$gte' => $today]
+], [
+    'sort' => ['check_in' => 1]
+]);
+
+$bookings = [];
+foreach ($bookingCursor as $doc) {
+    $b = docToArray($doc);
+    $in = new DateTime($b['check_in']);
+    $out = new DateTime($b['check_out']);
+    $b['days'] = (int) $in->diff($out)->days;
+    $bookings[] = $b;
+}
 
 ?>
 
@@ -594,14 +618,14 @@ body, html {
     <th>Total Days</th>
 </tr>
 
-<?php $i=1; while($b=$bookings->fetch_assoc()): ?>
+<?php $i=1; foreach($bookings as $b): ?>
 <tr>
     <td><?= $i++ ?></td>
     <td><?= $b['check_in'] ?></td>
     <td><?= $b['check_out'] ?></td>
     <td><?= $b['days'] ?></td>
 </tr>
-<?php endwhile; ?>
+<?php endforeach; ?>
 </table>
 
 </div>
@@ -630,7 +654,7 @@ body, html {
   <div class="date-box">
     <h3>Select Booking Dates</h3>
 
-    <?php if ($bookings->num_rows === 0): ?>
+    <?php if (count($bookings) === 0): ?>
     <tr>
       <td colspan="4" style="text-align:center;color:#777;">
         No upcoming bookings for this room

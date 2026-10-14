@@ -6,9 +6,9 @@ $step = "email"; // default step
 
 // STEP 1: Check Email
 if (isset($_POST['check_email'])) {
-    $email = $_POST['email'];
-    $q = mysqli_query($conn, "SELECT * FROM users WHERE email='$email'");
-    if (mysqli_num_rows($q) > 0) {
+    $email = trim($_POST['email']);
+    $user = $db->users->findOne(['email' => $email]);
+    if ($user) {
         $step = "reset"; // show reset form
     } else {
         $message = "This email is not registered!";
@@ -17,10 +17,13 @@ if (isset($_POST['check_email'])) {
 
 // STEP 2: Reset Password
 if (isset($_POST['reset_password'])) {
-    $email = $_POST['email'];
+    $email = trim($_POST['email']);
     $newpass = $_POST['password'];
     $hashed = password_hash($newpass, PASSWORD_DEFAULT);
-    mysqli_query($conn, "UPDATE users SET password='$hashed' WHERE email='$email'");
+    $db->users->updateOne(
+        ['email' => $email],
+        ['$set' => ['password' => $hashed]]
+    );
     $message = "Password updated successfully! <a href='login.php'>Login now</a>";
     $step = "done";
 }
@@ -113,7 +116,7 @@ a {
     <!-- Step 2: New Password Form -->
     <?php if ($step == "reset"): ?>
         <form method="POST">
-            <input type="hidden" name="email" value="<?php echo $email; ?>">
+            <input type="hidden" name="email" value="<?php echo htmlspecialchars($email ?? ''); ?>">
             <input type="password" name="password" placeholder="Enter new password" required>
             <button type="submit" name="reset_password">Reset Password</button>
         </form>

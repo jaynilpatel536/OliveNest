@@ -3,22 +3,21 @@ require_once __DIR__ . '/../includes/header.php';
 require __DIR__ . '/../config/db.php'; 
 
 $sort = $_GET['sort'] ?? '';
-$orderBy = "ORDER BY rating DESC"; // default (Recommended)
+$sortOrder = ['rating' => -1]; // default (Recommended)
 
 // Determine sorting
 switch ($sort) {
-    case 'price_low': $orderBy = "ORDER BY price ASC"; break;
-    case 'price_high': $orderBy = "ORDER BY price DESC"; break;
-    case 'rating': $orderBy = "ORDER BY rating DESC"; break;
-    case 'city': $orderBy = "ORDER BY city ASC"; break;
-    case 'newest': $orderBy = "ORDER BY id DESC"; break;
+    case 'price_low': $sortOrder = ['price' => 1]; break;
+    case 'price_high': $sortOrder = ['price' => -1]; break;
+    case 'rating': $sortOrder = ['rating' => -1]; break;
+    case 'city': $sortOrder = ['city' => 1]; break;
+    case 'newest': $sortOrder = ['id' => -1]; break;
 }
 
-$query = "SELECT id, title, city, price, rating, description FROM rooms $orderBy";
-$result = mysqli_query($conn, $query);
-
-if (!$result) {
-    die("Query Failed: " . mysqli_error($conn));
+$cursor = $db->rooms->find([], ['sort' => $sortOrder]);
+$rooms = [];
+foreach ($cursor as $doc) {
+    $rooms[] = docToArray($doc);
 }
 ?>
 
@@ -70,7 +69,7 @@ if (!$result) {
 </p>
 
 <div class="grid">
-    <?php while ($r = mysqli_fetch_assoc($result)) : ?>
+    <?php foreach ($rooms as $r) : ?>
         <?php 
         // Store room data in session
         $_SESSION['rooms_data'][$r['id']] = [
@@ -80,10 +79,16 @@ if (!$result) {
             'city' => $r['city']
         ];
 
-        // Image logic
+        // Image logic: Check uploads first, then assets/images/room{id}.jpg
         $imgDir = "../uploads/rooms/room" . $r['id'] . "/";
-        $imgs = glob($imgDir . "*.{jpg,jpeg,png,webp}", GLOB_BRACE);
-        $cover = $imgs[0] ?? "../assets/images/no-image.jpg";
+        $imgs = glob($imgDir . "*.{jpg,jpeg,png,webp}", GLOB_BRACE) ?: [];
+        if (!empty($imgs)) {
+            $cover = $imgs[0];
+        } elseif (file_exists(__DIR__ . "/../assets/images/room" . $r['id'] . ".jpg")) {
+            $cover = "/OliveNest/assets/images/room" . $r['id'] . ".jpg";
+        } else {
+            $cover = "/OliveNest/assets/images/room1.jpg";
+        }
         ?>
         <div class="card">
             <a href="room-details.php?id=<?= $r['id'] ?>">
@@ -103,7 +108,7 @@ if (!$result) {
                 <p class="price">₹<?= $r['price'] ?> / night</p>
             </div>
         </div>
-    <?php endwhile; ?>
+    <?php endforeach; ?>
 </div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

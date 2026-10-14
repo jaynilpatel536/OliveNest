@@ -1,6 +1,6 @@
 /vendor/
-/uploads/
-/config/db.php
+/uploads/homes/
+!/uploads/rooms/
 .env
 
 phpmailer/
@@ -8,3 +8,5 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# One-time scripts — delete after use
+migrate_to_mongo.php

@@ -199,6 +199,3 @@ if(profileBtn){
     });
 }
 </script>
-
-</body>
-</html>

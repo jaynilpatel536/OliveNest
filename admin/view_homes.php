@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "../config/db.php"; // Adjust path if needed
+include __DIR__ . '/../config/db.php'; // Adjust path if needed
 
 // OPTIONAL: Check admin login
 if (!isset($_SESSION['admin'])) {
@@ -8,7 +8,7 @@ if (!isset($_SESSION['admin'])) {
     exit();
 }
 
-$result = mysqli_query($conn, "SELECT * FROM homes ORDER BY created_at DESC");
+$cursor = $db->homes->find([], ['sort' => ['created_at' => -1]]);
 ?>
 
 <!DOCTYPE html>
@@ -55,25 +55,29 @@ h2 {
 <div class="container">
     <h2>Uploaded Homes</h2>
 
-    <?php while($row = mysqli_fetch_assoc($result)): ?>
+    <?php foreach ($cursor as $doc): 
+        $row = docToArray($doc);
+    ?>
         <div class="home-card">
-            <h3><?php echo htmlspecialchars($row['home_title']); ?></h3>
-            <p><strong>Owner:</strong> <?php echo htmlspecialchars($row['owner_name']); ?></p>
-            <p><strong>Location:</strong> <?php echo htmlspecialchars($row['location']); ?></p>
-            <p><strong>Price/Night:</strong> ₹<?php echo htmlspecialchars($row['price']); ?></p>
-            <p><strong>Description:</strong> <?php echo nl2br(htmlspecialchars($row['description'])); ?></p>
+            <h3><?php echo htmlspecialchars((string)($row['home_title'] ?? '')); ?></h3>
+            <p><strong>Owner:</strong> <?php echo htmlspecialchars((string)($row['owner_name'] ?? '')); ?></p>
+            <p><strong>Location:</strong> <?php echo htmlspecialchars((string)($row['location'] ?? '')); ?></p>
+            <p><strong>Price/Night:</strong> ₹<?php echo htmlspecialchars((string)($row['price'] ?? '')); ?></p>
+            <p><strong>Description:</strong> <?php echo nl2br(htmlspecialchars((string)($row['description'] ?? ''))); ?></p>
             <div class="home-images">
                 <?php
-                $images = explode(",", $row['images']); // split multiple images
+                $imagesVal = $row['images'] ?? '';
+                $images = is_array($imagesVal) ? $imagesVal : explode(",", (string)$imagesVal); // split multiple images
                 foreach ($images as $img) {
+                    $img = trim($img);
                     if($img != "") {
-                        echo '<img src="../uploads/homes/'.$img.'" alt="Home Image">';
+                        echo '<img src="../uploads/homes/'.htmlspecialchars($img).'" alt="Home Image">';
                     }
                 }
                 ?>
             </div>
         </div>
-    <?php endwhile; ?>
+    <?php endforeach; ?>
 </div>
 
 </body>

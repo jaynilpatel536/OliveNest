@@ -1,24 +1,26 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/../config/db.php';
 
-
+if (!isset($_SESSION['username'])) {
+    header("Location: /OliveNest/auth/login.php");
+    exit();
+}
 
 $username = $_SESSION['username'];
 
 /* =========================
    FETCH USER EMAIL
 ========================= */
-$stmt = mysqli_prepare($conn, "SELECT email FROM users WHERE username = ?");
-mysqli_stmt_bind_param($stmt, "s", $username);
-mysqli_stmt_execute($stmt);
-$userResult = mysqli_stmt_get_result($stmt);
-$user = mysqli_fetch_assoc($userResult);
+$userDoc = $db->users->findOne(['username' => $username]);
 
-if (!$user) {
+if (!$userDoc) {
     die("User not found");
 }
 
+$user = docToArray($userDoc);
 $user_email = $user['email'];
 
 /* =========================
@@ -27,14 +29,10 @@ $user_email = $user['email'];
 if (isset($_GET['cancel_id'])) {
     $cancel_id = (int) $_GET['cancel_id'];
 
-    $stmt = mysqli_prepare(
-        $conn,
-        "UPDATE bookings 
-         SET booking_status='cancelled' 
-         WHERE id=? AND guest_email=?"
+    $db->bookings->updateOne(
+        ['id' => $cancel_id, 'guest_email' => $user_email],
+        ['$set' => ['booking_status' => 'cancelled']]
     );
-    mysqli_stmt_bind_param($stmt, "is", $cancel_id, $user_email);
-    mysqli_stmt_execute($stmt);
 
     header("Location: my_booking.php");
     exit();
@@ -43,27 +41,32 @@ if (isset($_GET['cancel_id'])) {
 /* =========================
    FETCH BOOKINGS + PAYMENTS
 ========================= */
-$sql = "
-SELECT 
-    b.*,
-    COALESCE(p.status, 'pending') AS payment_status
-FROM bookings b
-LEFT JOIN payments p ON b.id = p.booking_id
-WHERE b.guest_email = ?
-ORDER BY b.created_at DESC
-";
+$cursor = $db->bookings->aggregate([
+    ['$match' => ['guest_email' => $user_email]],
+    ['$lookup' => [
+        'from' => 'payments',
+        'localField' => 'id',
+        'foreignField' => 'booking_id',
+        'as' => 'payment_info'
+    ]],
+    ['$addFields' => [
+        'payment_status' => [
+            '$ifNull' => [
+                ['$arrayElemAt' => ['$payment_info.status', 0]],
+                'pending'
+            ]
+        ]
+    ]],
+    ['$sort' => ['created_at' => -1]]
+]);
 
-$stmt = mysqli_prepare($conn, $sql);
-mysqli_stmt_bind_param($stmt, "s", $user_email);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
+$bookings = [];
+foreach ($cursor as $doc) {
+    $bookings[] = docToArray($doc);
+}
+
+require_once __DIR__ . '/../includes/header.php';
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>My Bookings - OliveNest</title>
 
 <style>
 :root {
@@ -222,24 +225,19 @@ h2 {
     }
 }
 </style>
-</head>
-
-<body>
 
 <div class="page-wrapper">
-
-
 
 <main class="content-area">
 <div class="container">
 
 <h2>My Bookings</h2>
 
-<?php if (mysqli_num_rows($result) == 0): ?>
+<?php if (empty($bookings)): ?>
     <div class="empty">You have not made any bookings yet.</div>
 <?php endif; ?>
 
-<?php while ($row = mysqli_fetch_assoc($result)): ?>
+<?php foreach ($bookings as $row): ?>
 <div class="card">
 
     <div>
@@ -279,14 +277,11 @@ h2 {
     </div>
 
 </div>
-<?php endwhile; ?>
+<?php endforeach; ?>
 
 </div>
 </main>
 
-<?php include "../includes/footer.php"; ?>
-
 </div>
 
-</body>
-</html>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

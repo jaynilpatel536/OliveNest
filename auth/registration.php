@@ -13,26 +13,38 @@ if (isset($_POST['register'])) {
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
     $role     = $_POST['role'];
 
-    // Check if username or email already exists (NO column dependency)
-    $checkSql = "SELECT 1 FROM users WHERE username = ? OR email = ?";
-    $stmt = mysqli_prepare($conn, $checkSql);
-    mysqli_stmt_bind_param($stmt, "ss", $username, $email);
-    mysqli_stmt_execute($stmt);
-    mysqli_stmt_store_result($stmt);
+    // Check if username or email already exists
+    $existingCount = $db->users->countDocuments([
+        '$or' => [
+            ['username' => $username],
+            ['email' => $email]
+        ]
+    ]);
 
-    if (mysqli_stmt_num_rows($stmt) > 0) {
+    if ($existingCount > 0) {
         $error = "Username or Email already exists.";
     } else {
 
         // Insert user securely
-        $insertSql = "INSERT INTO users (full_name, email, username, password, role)
-                      VALUES (?, ?, ?, ?, ?)";
-        $stmt = mysqli_prepare($conn, $insertSql);
-        mysqli_stmt_bind_param($stmt, "sssss", $fullname, $email, $username, $password, $role);
+        try {
+            $newId = getNextId($db, 'users');
+            $insertResult = $db->users->insertOne([
+                'id' => $newId,
+                'full_name' => $fullname,
+                'email' => $email,
+                'username' => $username,
+                'password' => $password,
+                'role' => $role,
+                'extra_info' => '',
+                'created_at' => new MongoDB\BSON\UTCDateTime()
+            ]);
 
-        if (mysqli_stmt_execute($stmt)) {
-            $success = true;
-        } else {
+            if ($insertResult->getInsertedCount() > 0) {
+                $success = true;
+            } else {
+                $error = "Registration failed. Please try again.";
+            }
+        } catch (Exception $e) {
             $error = "Registration failed. Please try again.";
         }
     }
