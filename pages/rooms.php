@@ -79,10 +79,16 @@ foreach ($cursor as $doc) {
             'city' => $r['city']
         ];
 
-        // Image logic
+        // Image logic: Check uploads first, then assets/images/room{id}.jpg
         $imgDir = "../uploads/rooms/room" . $r['id'] . "/";
-        $imgs = glob($imgDir . "*.{jpg,jpeg,png,webp}", GLOB_BRACE);
-        $cover = $imgs[0] ?? "../assets/images/no-image.jpg";
+        $imgs = glob($imgDir . "*.{jpg,jpeg,png,webp}", GLOB_BRACE) ?: [];
+        if (!empty($imgs)) {
+            $cover = $imgs[0];
+        } elseif (file_exists(__DIR__ . "/../assets/images/room" . $r['id'] . ".jpg")) {
+            $cover = "/OliveNest/assets/images/room" . $r['id'] . ".jpg";
+        } else {
+            $cover = "/OliveNest/assets/images/room1.jpg";
+        }
         ?>
         <div class="card">
             <a href="room-details.php?id=<?= $r['id'] ?>">

@@ -135,7 +135,19 @@ if (isset($_POST['save_dates'])) {
 ========================================= */
 
 $folder = "../uploads/rooms/room".$id."/";
-$images = glob($folder."*.{jpg,jpeg,png,webp}", GLOB_BRACE);
+$images = glob($folder."*.{jpg,jpeg,png,webp}", GLOB_BRACE) ?: [];
+if (empty($images)) {
+    $assetGallery = glob(__DIR__ . "/../assets/images/1/*.{jpg,jpeg,png,webp}", GLOB_BRACE) ?: [];
+    if (!empty($assetGallery)) {
+        $images = array_map(function($p) {
+            return "/OliveNest/assets/images/1/" . basename($p);
+        }, $assetGallery);
+    } elseif (file_exists(__DIR__ . "/../assets/images/room" . $id . ".jpg")) {
+        $images = ["/OliveNest/assets/images/room" . $id . ".jpg"];
+    } else {
+        $images = ["/OliveNest/assets/images/room1.jpg"];
+    }
+}
 
 // Dummy data
 
