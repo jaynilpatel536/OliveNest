@@ -34,6 +34,7 @@ if (isset($_SESSION['flash_message'])) {
         . $_SESSION['flash_message'] . '</div>';
     unset($_SESSION['flash_message']); // Remove after showing once
 }
+?>
 <style>
     .page-space{height:6px;}
     .container{width:90%;max-width:1300px;margin:auto;}
